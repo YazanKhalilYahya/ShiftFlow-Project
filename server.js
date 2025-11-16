@@ -12,30 +12,25 @@ const app = express();
 const PORT = 5000;
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret_key";
 
-app.use(express.json());
-app.use(cookieParser());
+// CORS: استخدم مصفوفة origins فقط
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://shiftflow-workers.netlify.app",
+  "https://shiftflow-admin.netlify.app",
+];
 app.use(
   cors({
-    origin: (origin, callback) => {
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "https://shiftflow-workers.netlify.app",
-        "https://shiftflow-admin.netlify.app",
-      ];
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: allowedOrigins,
     credentials: true,
   })
 );
 
+app.use(express.json());
+app.use(cookieParser());
 connectdb();
 
-// Admin registration
+// ----------- Admin Registration -----------
 app.post("/api/admin/register", async (req, res) => {
   try {
     const { username, password, email } = req.body;
@@ -57,7 +52,7 @@ app.post("/api/admin/register", async (req, res) => {
   }
 });
 
-// Admin login
+// ----------- Admin Login -----------
 app.post("/api/admin/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -75,11 +70,8 @@ app.post("/api/admin/login", async (req, res) => {
     const token = jwt.sign(
       { id: admin._id, username: admin.username },
       JWT_SECRET,
-      {
-        expiresIn: "1h",
-      }
+      { expiresIn: "1h" }
     );
-
     res.cookie("workerToken", token, {
       httpOnly: true,
       secure: true,
@@ -92,7 +84,7 @@ app.post("/api/admin/login", async (req, res) => {
   }
 });
 
-// Worker login
+// ----------- Worker Login -----------
 app.post("/api/worker/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -111,18 +103,14 @@ app.post("/api/worker/login", async (req, res) => {
     const token = jwt.sign(
       { id: workerAuth._id, username: workerAuth.username },
       JWT_SECRET,
-      {
-        expiresIn: "1d",
-      }
+      { expiresIn: "1d" }
     );
-
     res.cookie("workerToken", token, {
       httpOnly: true,
       secure: true,
       sameSite: "none",
       maxAge: 24 * 3600 * 1000,
     });
-
     res.json({
       message: "Logged in successfully",
       workerDataId: workerAuth.workerDataId,
@@ -132,9 +120,9 @@ app.post("/api/worker/login", async (req, res) => {
   }
 });
 
-// Middleware - session auth
+// ----------- Token Middleware -----------
 function authenticateToken(req, res, next) {
-  const token = req.cookies.token || req.cookies.workerToken;
+  const token = req.cookies.workerToken;
   if (!token) return res.status(401).json({ message: "Access token required" });
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ message: "Invalid token" });
@@ -143,10 +131,10 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// Protect all worker routes
+// ----------- Protect Worker Routes -----------
 app.use("/api/workers", authenticateToken);
 
-// Create worker with login
+// ----------- Worker Register -----------
 app.post("/api/workers/register", async (req, res) => {
   try {
     const { name, shifts, username, email, password } = req.body;
@@ -177,7 +165,7 @@ app.post("/api/workers/register", async (req, res) => {
   }
 });
 
-// Basic CRUD on workers
+// ----------- CRUD Workers -----------
 app.post("/api/workers", async (req, res) => {
   try {
     const { name, shifts } = req.body;
@@ -227,7 +215,6 @@ app.put("/api/workers/:id", async (req, res) => {
   }
 });
 
-// Delete worker + login
 app.delete("/api/workers/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -241,7 +228,7 @@ app.delete("/api/workers/:id", async (req, res) => {
   }
 });
 
-// Editing/deleting shifts for workers
+// ----------- Edit/Delete Shifts -----------
 app.put("/api/workers/:workerId/shifts/:shiftId", async (req, res) => {
   try {
     const { workerId, shiftId } = req.params;
@@ -272,7 +259,7 @@ app.delete("/api/workers/:workerId/shifts/:shiftId", async (req, res) => {
   }
 });
 
-// Workers login overview for dashboard (All Workers)
+// ----------- Workers Login Overview -----------
 app.get("/api/workers/logins", async (req, res) => {
   try {
     const workers = await WorkerLoginModel.find({}, "name username email");
@@ -282,6 +269,7 @@ app.get("/api/workers/logins", async (req, res) => {
   }
 });
 
+// ----------- Logout -----------
 app.post("/api/logout", (req, res) => {
   res.clearCookie("workerToken", {
     httpOnly: true,
@@ -291,10 +279,11 @@ app.post("/api/logout", (req, res) => {
   res.json({ message: "Logged out" });
 });
 
+// ----------- Root -----------
 app.get("/", (req, res) => {
   res.send("ShiftFlow API is Running");
 });
 
 app.listen(PORT, () =>
-  console.log(`Server running on port http://localhost:${PORT}`)
+  console.log(`Server running on http://localhost:${PORT}`)
 );
