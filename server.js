@@ -17,7 +17,12 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: (origin, callback) => {
-      const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "https://shiftflow-workers.netlify.app",
+        "https://shiftflow-admin.netlify.app",
+      ];
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -77,8 +82,8 @@ app.post("/api/admin/login", async (req, res) => {
 
     res.cookie("workerToken", token, {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: true,
+      sameSite: "none",
       maxAge: 24 * 3600 * 1000,
     });
     res.json({ message: "Logged in successfully" });
@@ -113,8 +118,8 @@ app.post("/api/worker/login", async (req, res) => {
 
     res.cookie("workerToken", token, {
       httpOnly: true,
-      secure: false,
-      sameSite: "strict",
+      secure: true,
+      sameSite: "none",
       maxAge: 24 * 3600 * 1000,
     });
 
@@ -277,10 +282,12 @@ app.get("/api/workers/logins", async (req, res) => {
   }
 });
 
-// server.js
-
 app.post("/api/logout", (req, res) => {
-  res.clearCookie("workerToken");
+  res.clearCookie("workerToken", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+  });
   res.json({ message: "Logged out" });
 });
 
