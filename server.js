@@ -81,8 +81,8 @@ app.post("/api/admin/login", async (req, res) => {
 
     res.cookie("workerToken", token, {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: true,
+      sameSite: "None",
       maxAge: 24 * 3600 * 1000,
     });
     res.json({ message: "Logged in successfully" });
@@ -115,8 +115,8 @@ app.post("/api/worker/login", async (req, res) => {
 
     res.cookie("workerToken", token, {
       httpOnly: true,
-      secure: false,
-      sameSite: "strict",
+      secure: true,
+      sameSite: "None",
       maxAge: 24 * 3600 * 1000,
     });
 
@@ -253,7 +253,7 @@ app.post("/api/schedules/create-auto", async (req, res) => {
   }
 });
 
-// إضافة عامل إلى جدول موجود (الجديد)
+// إضافة عامل إلى جدول موجود
 app.post("/api/schedules/:scheduleId/add-worker", async (req, res) => {
   try {
     const { scheduleId } = req.params;
@@ -266,7 +266,7 @@ app.post("/api/schedules/:scheduleId/add-worker", async (req, res) => {
     if (schedule.assignments.some((a) => a.worker.toString() === workerId))
       return res.status(400).json({ message: "Worker already in schedule" });
 
-    // توزيع الورديات له فقط (يمكنك التعديل حسب الخوارزمية)
+    // توزيع الورديات له فقط
     let days = [];
     let current = new Date(schedule.period.from);
     let last = new Date(schedule.period.to);
@@ -274,7 +274,7 @@ app.post("/api/schedules/:scheduleId/add-worker", async (req, res) => {
       days.push(new Date(current));
       current.setDate(current.getDate() + 1);
     }
-    // توزيع افتراضي afternoon، ويمكنك التخصيص للخوارزمية المرغوبة هنا
+    // توزيع افتراضي afternoon
     const shifts = days.map((date) => ({ date, shiftType: "afternoon" }));
     schedule.assignments.push({ worker: workerId, shifts });
 
